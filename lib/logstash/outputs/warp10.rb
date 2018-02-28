@@ -46,18 +46,12 @@ class LogStash::Outputs::Warp10 < LogStash::Outputs::Base
   # Example: `['label0' , 'label1']`
   config :labels, validate: :array, default: [], required: true
 
-  # Boolean true to keep only one field as value of the entire log
-  config :only_one_value, validate: %w[true false], default: 'false', required: true
-
   # The key oy the value to keep if onlyMessage is to true
   config :value_key, validate: :string, default: 'message'
 
   # This setting controls how many events will be buffered before sending a batch
   # of events. Note that these are only batched for the same series
   config :flush_size, validate: :number, default: 300
-
-  # This settings provide https request to post gts data
-  config :https, validate: %w[true false], default: 'true', required: true
 
   # The amount of time since last flush before a flush is forced.
   #
@@ -70,10 +64,6 @@ class LogStash::Outputs::Warp10 < LogStash::Outputs::Base
   # near-real-time.
   config :idle_flush_time, validate: :number, default: 2
 
-  def to_boolean(str)
-    str == 'true'
-  end
-
   def register
     require 'ftw' # gem ftw
     require 'cgi'
@@ -82,8 +72,6 @@ class LogStash::Outputs::Warp10 < LogStash::Outputs::Base
     require 'net/https'
     require 'json'
     @queue = []
-    @is_only_message = to_boolean(@only_one_value)
-    @is_https = to_boolean(@https)
 
     buffer_initialize(
       max_items: @flush_size,
@@ -93,21 +81,18 @@ class LogStash::Outputs::Warp10 < LogStash::Outputs::Base
   end # def register
 
   def receive(event)
-    data_points = JSON.parse(event.to_json)
-    tags = 'source=logstash'
-    labels.each do |label|
-      tags += ',' + label + '=' + data_points[label]
+    unless event.nil?
+      data_points = JSON.parse(event.to_json)
+      tags = 'source=logstash'
+      labels.each do |label|
+        tags += ',' + label + '=' + data_points[label] if !(data_points[label].nil?)
+      end
+      gts_name = @gts_name
+      gts_time = (event.timestamp.to_f * 1_000_000.0).to_i
+      gts_value = data_points[value_key]
+      fix = "'"
+      buffer_receive(gts_time.to_s + '// ' + gts_name.to_s + '{' + tags + '} ' + fix + gts_value.to_s + fix + "\n")
     end
-    gts_name = @gts_name
-    gts_time = (event.timestamp.to_f * 1_000_000.0).to_i
-    gts_value = if @is_only_message
-                  data_points[value_key]
-                else
-                  event.to_s
-                end
-    fix = "'"
-    res = gts_time.to_s + '// ' + gts_name.to_s + '{' + tags + '} ' + fix + gts_value + fix + "\n"
-    buffer_receive(res)
   end # def receive
 
   def flush(events, _teardown = false)
@@ -117,9 +102,9 @@ class LogStash::Outputs::Warp10 < LogStash::Outputs::Base
     end
     uri = URI.parse(warp_uri)
     flow = Net::HTTP.new(uri.host, uri.port)
-    flow.use_ssl = @is_https
+    flow.use_ssl = uri.scheme.eql? "https"
     req = Net::HTTP::Post.new(uri.path, initheader = { 'X-Warp10-Token' => token, 'Content-Type' => 'text/plain' })
-    body = collect_string.encode('iso-8859-1').force_encoding('utf-8')
+    body = collect_string.encode('utf-8')
     flow.request(req, body)
   end # def flush
 

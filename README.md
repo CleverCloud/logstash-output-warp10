@@ -1,6 +1,6 @@
 # Logstash plugin #
 
-This is a plugin for [Logstash](https://github.com/elastic/logstash), inspired from the [influxDB one](https://github.com/logstash-plugins/logstash-output-influxdb).
+This is a [Logstash](https://github.com/elastic/logstash)-6.2.2 plugin to push data on Warp 10.
 
 It is fully free and fully open source. The license is Apache 2.0, meaning you are pretty much free to use it however you want in whatever way.
 
@@ -29,7 +29,7 @@ gem build logstash-output-warp10.gemspec
 * Install plugin 
 
 ```
-sudo bin/plugin install /path/to/logstash-output-warp10/logstash-output-warp10-0.0.1.gem
+sudo bin/plugin install /path/to/logstash-output-warp10/logstash-output-warp10-0.1.0.gem
 ```
 
 * Config Plugin, edit logstash.conf file
@@ -41,7 +41,6 @@ output {
     token => "token"
     gts_name => "log"
     labels => ['host']
-    https => "false"
   }
 }
 ```

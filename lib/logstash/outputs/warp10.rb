@@ -28,7 +28,7 @@ require 'openssl'
 # and minimize the need for multiple definitions to write
 # multiple series and still be efficient
 #
-class LogStash::Outputs::Warp < LogStash::Outputs::Base
+class LogStash::Outputs::Warp10 < LogStash::Outputs::Base
   include Stud::Buffer
 
   config_name 'warp10'

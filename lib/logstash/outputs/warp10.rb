@@ -56,6 +56,9 @@ class LogStash::Outputs::Warp10 < LogStash::Outputs::Base
   # of events. Note that these are only batched for the same series
   config :flush_size, validate: :number, default: 300
 
+  # This settings provide https request to post gts data
+  config :https, validate: %w[true false], default: 'true', required: true
+
   # The amount of time since last flush before a flush is forced.
   #
   # This setting helps ensure slow event rates don't get stuck in Logstash.
@@ -80,6 +83,7 @@ class LogStash::Outputs::Warp10 < LogStash::Outputs::Base
     require 'json'
     @queue = []
     @is_only_message = to_boolean(@only_one_value)
+    @is_https = to_boolean(@https)
 
     buffer_initialize(
       max_items: @flush_size,
@@ -111,9 +115,9 @@ class LogStash::Outputs::Warp10 < LogStash::Outputs::Base
     events.each do |ev|
       collect_string += ev
     end
-    https.use_ssl = true
     uri = URI.parse(warp_uri)
     flow = Net::HTTP.new(uri.host, uri.port)
+    flow.use_ssl = @is_https
     req = Net::HTTP::Post.new(uri.path, initheader = { 'X-Warp10-Token' => token, 'Content-Type' => 'text/plain' })
     body = collect_string.encode('iso-8859-1').force_encoding('utf-8')
     flow.request(req, body)

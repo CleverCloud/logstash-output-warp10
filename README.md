@@ -41,6 +41,7 @@ output {
     token => "token"
     gts_name => "log"
     labels => ['host']
+    https => "false"
   }
 }
 ```

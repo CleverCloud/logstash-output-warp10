@@ -37,9 +37,9 @@ sudo bin/plugin install /path/to/logstash-output-warp10/logstash-output-warp10-0
 ```
 output {
   warp10 {
-    warpUri => "warpUri"
+    warp_uri => "warp_uri"
     token => "token"
-    gtsName => "logstash"
+    gts_name => "log"
     labels => ['host']
   }
 }
@@ -48,22 +48,22 @@ output {
 * Run logstash
 
 ```
-sudo bin/logstash agent -f logstash.conf
+sudo bin/logstash -f logstash.conf
 ```
 
 ## Config File 
 
-* warpUri : required, indicate the url where to push data
+* warp_uri : required, indicate the url where to push data
 
 * token : required, Write token allowing pushing on a Warp10 application
 
-* gtsName : name of the gts wich will contain the logs, by default logstash
+* gts_name : name of the gts wich will contain the logs, by default logstash
 
 * labels : List of pattern, if they are contained in the event, then they are added to the gts as label, by default empty
 
-* onlyOneValue : If true keep only one event key as value, otherwise the entire log is pushed as value, by default false
+* only_one_value : If true keep only one event key as value, otherwise the entire log is pushed as value, by default false
 
-* valueKey : The key of the value to push on Warp10 if onlyOneValue is true, by default message
+* value_key : The key of the value to push on Warp10 if onlyOneValue is true, by default message
 
 * flush_size : This setting controls how many events will be buffered before sending a batch of events, by default 100
 

@@ -15,11 +15,12 @@
 #
 
 # encoding: utf-8
-require "logstash/namespace"
-require "logstash/outputs/base"
-require "logstash/json"
-require "stud/buffer"
-require "openssl"
+
+require 'logstash/namespace'
+require 'logstash/outputs/base'
+require 'logstash/json'
+require 'stud/buffer'
+require 'openssl'
 
 # This output lets you output Metrics to Warp10
 # config_name "warp10"
@@ -30,30 +31,30 @@ require "openssl"
 class LogStash::Outputs::Warp < LogStash::Outputs::Base
   include Stud::Buffer
 
-  config_name "warp10"
+  config_name 'warp10'
 
   # The URL address to reach your Warp application
-  config :warpUri, :validate => :string, :required => true
+  config :warp_uri, validate: :string, required: true
 
   # The write token credential of your application
-  config :token, :validate => :string, :required => true
- 
+  config :token, validate: :string, required: true
+
   # The given name of your gts
-  config :gtsName, :validate => :string, :default => "logstash", :required => true
+  config :gts_name, validate: :string, default: 'logstash', required: true
 
   # List of log's key word to put as gts labels
   # Example: `['label0' , 'label1']`
-  config :labels, :validate => :array, :default => [], :required => true
+  config :labels, validate: :array, default: [], required: true
 
   # Boolean true to keep only one field as value of the entire log
-  config :onlyOneValue, :validate => ['true', 'false'], :default => 'false', :required => true
-  
+  config :only_one_value, validate: %w[true false], default: 'false', required: true
+
   # The key oy the value to keep if onlyMessage is to true
-  config :valueKey, :validate => :string, :default => "message"
+  config :value_key, validate: :string, default: 'message'
 
   # This setting controls how many events will be buffered before sending a batch
   # of events. Note that these are only batched for the same series
-  config :flush_size, :validate => :number, :default => 100
+  config :flush_size, validate: :number, default: 300
 
   # The amount of time since last flush before a flush is forced.
   #
@@ -64,65 +65,61 @@ class LogStash::Outputs::Warp < LogStash::Outputs::Base
   #
   # This helps keep both fast and slow log streams moving along in
   # near-real-time.
-  config :idle_flush_time, :validate => :number, :default => 1
-  
+  config :idle_flush_time, validate: :number, default: 2
+
   def to_boolean(str)
-      str == 'true'
+    str == 'true'
   end
 
-  public
   def register
-    require "ftw" # gem ftw
-    require "cgi"
-    require "uri"
-    require "net/http"
-    require "net/https"
-    require "json"
+    require 'ftw' # gem ftw
+    require 'cgi'
+    require 'uri'
+    require 'net/http'
+    require 'net/https'
+    require 'json'
     @queue = []
-    @isOnlyMessage = to_boolean(@onlyOneValue)
+    @is_only_message = to_boolean(@only_one_value)
 
     buffer_initialize(
-      :max_items => @flush_size,
-      :max_interval => @idle_flush_time,
-      :logger => @logger
+      max_items: @flush_size,
+      max_interval: @idle_flush_time,
+      logger: @logger
     )
   end # def register
 
-  public
-  def receive(event)  
-    data_points = JSON.parse(event.to_json())
-    tags = "source=logstash"
+  def receive(event)
+    data_points = JSON.parse(event.to_json)
+    tags = 'source=logstash'
     labels.each do |label|
-      tags+= "," + label + "=" + data_points[label]
+      tags += ',' + label + '=' + data_points[label]
     end
-    gtsName = @gtsName
-    gtsTime = (event.timestamp.to_f * 1000000.0).to_i
-    gtsValue = String.new
-    if @isOnlyMessage
-      gtsValue = data_points[valueKey]
-    else
-      gtsValue = event.to_s
-    end
+    gts_name = @gts_name
+    gts_time = (event.timestamp.to_f * 1_000_000.0).to_i
+    gts_value = if @is_only_message
+                  data_points[value_key]
+                else
+                  event.to_s
+                end
     fix = "'"
-    string = gtsTime.to_s + "// " + gtsName.to_s + "{" + tags + "} " + fix + gtsValue + fix + " \n"
-
-    buffer_receive(string)
+    res = gts_time.to_s + '// ' + gts_name.to_s + '{' + tags + '} ' + fix + gts_value + fix + "\n"
+    buffer_receive(res)
   end # def receive
 
-  def flush(events, teardown = false)
-    collectString = String.new
+  def flush(events, _teardown = false)
+    collect_string = ''
     events.each do |ev|
-      collectString += ev
+      collect_string += ev
     end
-    uri = URI.parse(warpUri)
-    https = Net::HTTP.new(uri.host,uri.port)
     https.use_ssl = true
-    req = Net::HTTP::Post.new(uri.path, initheader = {'X-Warp10-Token'=> token, 'Content-Type'=> 'text/plain'})
-    req.body = collectString.encode("iso-8859-1").force_encoding("utf-8")
-    res = https.request(req)
+    uri = URI.parse(warp_uri)
+    flow = Net::HTTP.new(uri.host, uri.port)
+    req = Net::HTTP::Post.new(uri.path, initheader = { 'X-Warp10-Token' => token, 'Content-Type' => 'text/plain' })
+    body = collect_string.encode('iso-8859-1').force_encoding('utf-8')
+    flow.request(req, body)
   end # def flush
 
   def close
-    buffer_flush(:final => true)
-  end # def teardown
+    buffer_flush(final: true)
+  end
 end # class LogStash::Outputs::Warp

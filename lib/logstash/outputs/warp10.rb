@@ -96,7 +96,7 @@ class LogStash::Outputs::Warp10 < LogStash::Outputs::Base
     data_points = JSON.parse(event.to_json)
     tags = 'source=logstash'
     labels.each do |label|
-      tags += ',' + label + '=' + data_points[label]
+      tags += ',' + label + '=' + data_points[label] if !(data_points[label].nil?)
     end
     gts_name = @gts_name
     gts_time = (event.timestamp.to_f * 1_000_000.0).to_i

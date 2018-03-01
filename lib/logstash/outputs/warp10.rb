@@ -119,7 +119,7 @@ class LogStash::Outputs::Warp10 < LogStash::Outputs::Base
     flow = Net::HTTP.new(uri.host, uri.port)
     flow.use_ssl = @is_https
     req = Net::HTTP::Post.new(uri.path, initheader = { 'X-Warp10-Token' => token, 'Content-Type' => 'text/plain' })
-    body = collect_string.encode('iso-8859-1').force_encoding('utf-8')
+    body = collect_string.encode('utf-8')
     flow.request(req, body)
   end # def flush
 
